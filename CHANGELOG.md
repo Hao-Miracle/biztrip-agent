@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 
 ---
 
+## [0.1.1] - 2026-07-05
+
+### 新增
+
+#### 文档体系
+- **安装指南** — `docs/installation.md`，详细的安装和配置步骤，支持多邮箱服务商
+- **使用指南** — `docs/usage.md`，功能说明、输出格式、命令行参数
+- **常见问题 FAQ** — `docs/faq.md`，使用相关、数据准确、技术问题、贡献指南
+- **Agent Skills 使用指南** — `docs/skills.md`，各平台 Skill 配置方法
+- **贡献指南** — `CONTRIBUTING.md`，代码规范、提交规范、贡献方式
+
+#### GitHub 配置
+- **LICENSE** — MIT 许可证正式文件
+- **Issue 模板** — Bug 报告模板 + 功能建议模板
+- **PR 模板** — Pull Request 提交模板
+- **CHANGELOG** — 遵循 Keep a Changelog 规范的变更日志
+
+### 改进
+
+- **README 产品化重写** — 居中标题、动态徽章、痛点引入、核心能力展示、快速上手、输出效果、完整导航
+- **仓库结构优化** — 新增 `docs/` 目录分离文档，`.github/` 目录规范 GitHub 配置
+- **版本号徽章** — 使用 GitHub 动态版本徽章
+
+### 路线图补充
+- Phase 3 团队版（多人协作 + 审批流 + 财务系统对接）加入路线图
+
+---
+
 ## [0.1.0] - 2026-07-05
 
 ### 新增
@@ -49,4 +77,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 
 ---
 
+[0.1.1]: https://github.com/Hao-Miracle/BizTrip-Agent/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Hao-Miracle/BizTrip-Agent/releases/tag/v0.1.0

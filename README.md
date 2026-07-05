@@ -1,231 +1,249 @@
+<div align="center">
+
 # BizTrip Agent
 
-> 个人出差与旅行的行程与报销信息自动归集工具。
-> 授权邮箱，AI 自动扫描确认邮件，提取结构化信息。出差中看行程，出差后一键生成报销表。
+**个人出差与旅行的行程与报销信息自动归集工具**
+
+授权邮箱，AI 自动扫描确认邮件，提取结构化信息。  
+出差中看行程，出差后一键生成报销表。
 
 <p>
-  <img src="https://img.shields.io/badge/version-0.1.0-blue" alt="version">
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="license">
-  <img src="https://img.shields.io/badge/python-3.8+-yellow" alt="python">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/CHANGELOG-查看-8A2BE2" alt="changelog"></a>
+  <a href="https://github.com/Hao-Miracle/BizTrip-Agent/releases">
+    <img src="https://img.shields.io/github/v/release/Hao-Miracle/BizTrip-Agent?style=flat-square" alt="release">
+  </a>
+  <img src="https://img.shields.io/badge/python-3.8+-yellow?style=flat-square" alt="python">
+  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license">
+  <a href="CHANGELOG.md">
+    <img src="https://img.shields.io/badge/CHANGELOG-8A2BE2?style=flat-square&logo=keep-a-changelog&logoColor=white" alt="changelog">
+  </a>
+  <a href="https://github.com/Hao-Miracle/BizTrip-Agent/stargazers">
+    <img src="https://img.shields.io/github/stars/Hao-Miracle/BizTrip-Agent?style=flat-square&color=orange" alt="stars">
+  </a>
 </p>
 
-## 🌟 核心价值
+<p>
+  <a href="#-快速开始">快速开始</a> ·
+  <a href="docs/usage.md">使用文档</a> ·
+  <a href="docs/faq.md">常见问题</a> ·
+  <a href="CHANGELOG.md">更新日志</a> ·
+  <a href="CONTRIBUTING.md">贡献指南</a>
+</p>
 
-| 阶段 | 你需要什么 | 它做什么 |
-|------|-----------|---------|
-| **出差/旅行中** | 今晚住哪？明天几点车？航班号？ | 按行程聚合，一目了然 |
-| **出差后** | 整理订单和发票，生成报销单 | 自动汇总，一键导出 Excel |
-| **旅行后** | 整理行程记录 | 旅行日程表 |
+</div>
 
-## 🎯 两种模式，同一引擎
+---
 
-| 模式 | 输入 | 输出 |
-|------|------|------|
-| **出差** | 机票、火车票、酒店、网约车、油费单、发票 | 行程卡 + 报销汇总表 + Excel |
-| **旅行** | 机票、火车票、酒店、门票、租车 | 行程卡 + 旅行日程表 |
+## ✨ 为什么用它？
 
-> 底层识别和提取逻辑完全一样，仅输出不同。同一套引擎，零额外开发成本。
+每次出差回来，是不是要花几个小时：
 
-## 🏗 项目架构
+- 📧 翻几十封邮件找订单和发票
+- 📋 手动录入机票、酒店、打车费用
+- 🔍 核对金额和日期，生怕出错
+- 📊 整理成 Excel 报销表
 
-```
-biztrip-agent/
-├── phase1/             ← 规则引擎（零依赖，必装）
-│   ├── fetch_emails.py      ← IMAP 邮箱连接
-│   ├── classify_emails.py   ← 规则分类（域名+关键词）
-│   ├── extract_emails.py    ← 结构化提取（正则+PDF）
-│   └── generate_report.py   ← 全链路输出（Excel+附件）
-├── phase2/             ← Agent 引擎（LLM 增强，可选）
-│   ├── llm_classify.py      ← LLM 路由分类 + 正则降级
-│   ├── llm_extract.py       ← LLM 专用提取 + 正则降级
-│   ├── llm_aggregate.py     ← LLM 出差聚合 + 规则兜底
-│   └── agent_report.py      ← Agent 主入口
-├── wiki/               ← 知识库（产品、架构、决策、规格）
-├── raw/                ← 原始需求文档
-├── skills/             ← 通用 Agent Skill 定义（Claude/Cursor/Copilot 都能用）
-├── .trae/skills/       ← TRAE IDE 专用 Skill
-├── .env.example        ← 配置模板
-└── output/             ← 生成的报表（本地，不提交 Git）
-```
+**BizTrip Agent 帮你全自动搞定：**
+
+> 授权邮箱 → 自动扫描 → 提取结构化信息 → 生成报销 Excel + 行程卡  
+> **全程本地处理，只读不写，隐私安全**
+
+---
+
+## 🎯 核心能力
+
+| 能力 | 说明 |
+|------|------|
+| **📧 多邮箱支持** | QQ / 163 / 126 / Gmail / Outlook，标准 IMAP 协议 |
+| **🤖 智能分类** | 域名匹配 + 关键词 + LLM 三层识别，准确率高 |
+| **📊 结构化提取** | 金额 / 日期 / 路线 / 订单号 / 发票号，全字段提取 |
+| **🧳 出差聚合** | 自动按时间段+目的地归并同一次出差 |
+| **📑 Excel 报表** | 报销总览 + 费用明细 + 按供应商统计，三 Sheet 齐全 |
+| **📁 附件归档** | 原始 PDF / ZIP 自动下载，每条记录可溯源 |
+| **🧠 LLM 增强** | 可选 AI 增强，提升复杂场景识别率 |
+| **🔒 隐私优先** | 全部本地处理，只读邮箱权限，数据不出你的电脑 |
+
+---
+
+## 🏆 支持的平台
+
+### ✈️ 机票
+去哪儿 · 携程 · 飞猪 · 各航司官网邮件
+
+### 🚄 火车票
+12306 · 智行
+
+### 🏨 酒店
+华住 · Booking · 携程 · 美团
+
+### 🚕 网约车
+滴滴 · 高德（曹操 / T3 / 及时 / 喜行 等）
+
+### 🧾 发票
+智慧发票 (cresvtv.cn) · 票根 (txffp.com)
+
+### 🎫 门票
+大麦
+
+> 新增平台只需加一行域名规则，欢迎 [贡献代码](CONTRIBUTING.md)！
+
+---
 
 ## 🚀 快速开始
 
-### 前置条件
-
-- Python ≥ 3.8
-- 邮箱需开启 IMAP 服务并获取授权码/应用专用密码：
-
-| 邮箱 | IMAP 服务器 | 获取授权码 |
-|------|-----------|-----------|
-| QQ 邮箱 | `imap.qq.com` | 设置 → 账户 → POP3/IMAP/SMTP 服务 |
-| 163 邮箱 | `imap.163.com` | 设置 → POP3/SMTP/IMAP → 开启并获取 |
-| 126 邮箱 | `imap.126.com` | 同上 |
-| Gmail | `imap.gmail.com` | 开启两步验证 → 生成应用专用密码 |
-| Outlook/Hotmail | `outlook.office365.com` | 账户安全 → 应用密码 |
-
-> 代码会根据 `@域名` 自动推断 IMAP 服务器，也可在 `.env` 中手动指定 `EMAIL_IMAP_SERVER`。
-
-### 安装
+### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/Hao-Miracle/biztrip-agent.git
-cd biztrip-agent
+git clone https://github.com/Hao-Miracle/BizTrip-Agent.git
+cd BizTrip-Agent
+```
 
-# 规则模式（零 API Key）
+### 2. 安装依赖
+
+```bash
+# 规则模式（零 API Key，推荐先试用）
 pip install python-dotenv PyPDF2 openpyxl
 
 # Agent 模式（LLM 增强，可选）
 pip install openai
 ```
 
-### 配置
+### 3. 配置邮箱
 
 ```bash
 cp .env.example .env
+# 编辑 .env，填入邮箱和授权码
 ```
 
-编辑 `.env`，填入自己的邮箱和授权码。如需 AI 增强，再填入 LLM 配置（详见下方）。
+> 详细配置指南见 [安装文档](docs/installation.md)
 
-### 运行
+### 4. 运行
 
 ```bash
-# 规则模式（零 API Key）
+# 规则模式（零 API Key 也能用）
 python3 phase1/generate_report.py
 
-# Agent 模式（AI 增强，不配 Key 自动降级规则模式）
+# Agent 模式（AI 增强，不配 Key 自动降级）
 python3 phase2/agent_report.py
 ```
 
-运行后按提示输入日期范围（`YYYY-MM-DD`），直接回车则扫描最近 60 封邮件。
+运行后按提示输入日期范围，直接回车扫描最近 60 封邮件。
 
 ---
 
-## 🤖 Agent 配置（零成本可用）
+## 📊 输出效果
 
-Agent 支持**任意兼容 OpenAI 协议的服务商**（含本地模型），配置 `.env` 三行即可切换：
+运行后在 `output/` 目录生成：
 
-```bash
+```
+output/
+├── 差旅汇总_20260705.xlsx    ← 三 Sheet Excel 报表
+└── 附件/                        ← 原始 PDF/ZIP 原件
+    ├── 机票/
+    ├── 火车票/
+    ├── 酒店/
+    ├── 网约车/
+    └── 发票/
+```
+
+### Excel 报表结构
+
+| Sheet | 内容 |
+|-------|------|
+| **报销总览** | 出差行程汇总 + 总额卡片 + 按类别汇总（分类配色） |
+| **费用明细** | 所有记录按日期排序，最高金额红色高亮，标注提取方法 |
+| **按供应商** | 各平台消费排名，隔行配色 |
+
+---
+
+## 🧠 LLM 增强（可选）
+
+Agent 模式支持**任意兼容 OpenAI 协议的服务商**（含本地模型），三行配置即可切换：
+
+```env
 # DeepSeek（推荐，中文好）
 LLM_API_KEY=sk-xxx
 LLM_BASE_URL=https://api.deepseek.com/v1
 LLM_MODEL=deepseek-chat
-
-# 通义千问
-LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-LLM_MODEL=qwen-plus
 
 # Ollama 本地模型（完全免费，零联网）
 LLM_BASE_URL=http://localhost:11434/v1
 LLM_MODEL=qwen2.5:7b
 ```
 
-更多服务商（GLM、Kimi、SiliconFlow、火山引擎）配置示例见 `.env.example`。
+更多服务商（通义千问 / GLM / Kimi / 火山引擎）配置见 [.env.example](.env.example)。
 
 ### 降级策略
 
 ```
-🧠 LLM 分类 → 置信度 < 0.7？→ 📋 域名匹配兜底
-🧠 LLM 提取 → 关键字段缺失 > 50%？→ 📋 正则提取兜底
-🧠 LLM 聚合 → 调用失败？→ 📋 基于目的地的规则聚合
+🧠 LLM 分类 → 置信度不足 → 📋 域名匹配兜底
+🧠 LLM 提取 → 关键字段缺失 → 📋 正则提取兜底
+🧠 LLM 聚合 → 调用失败     → 📋 规则聚合兜底
 ```
 
-**不配 `LLM_API_KEY` 完全可用**，自动降级纯规则引擎，零成本。
+**不配 API Key 完全可用**，自动降级纯规则引擎，零成本。
 
 ### 成本参考
 
 | 模型 | 一次扫描（~5 封差旅邮件） |
-|------|------|
+|------|--------------------------|
 | DeepSeek V3 | < 0.05 元 |
 | GLM-4-Flash | 0 元（免费额度） |
 | Ollama 本地 | 0 元 |
 
 ---
 
-## 📊 输出说明
-
-| 文件 | 说明 |
-|------|------|
-| `output/差旅汇总_YYYYMMDD.xlsx` | 三 Sheet Excel 报表 |
-| `output/附件/` | 原始 PDF/ZIP 原件归档 |
-
-### Excel 报表结构
-
-| Sheet | 内容 |
-|------|------|
-| **报销总览** | 出差行程汇总 + 总额卡片 + 按类别汇总（分类配色） |
-| **费用明细** | 所有记录，按日期排序，最高金额红色高亮，标注提取方法 |
-| **按供应商** | 各平台消费排名，隔行配色 |
-
-Agent 模式下，报销总览表额外包含**出差行程汇总**（LLM 自动聚合）。
-
----
-
-## 🔧 支持的平台
-
-| 品类 | 识别方式 | 覆盖平台 |
-|------|---------|---------|
-| 机票 | 域名 + 关键词 + LLM | 去哪儿、携程、飞猪、航司邮件 |
-| 火车票 | 域名 + 关键词 + LLM | 12306、智行 |
-| 酒店 | 域名 + 关键词 + LLM | 华住、Booking、携程、美团 |
-| 网约车 | 域名 + 关键词 + LLM | 滴滴、高德（曹操/T3/及时/喜行等） |
-| 发票 | 域名 + 关键词 + LLM | 智慧发票(cresvtv.cn)、票根(txffp.com) |
-| 门票 | 域名 + 关键词 + LLM | 大麦 |
-
-新增平台只需在 `classify_emails.py` 的 `DOMAIN_RULES` 加一行域名。
-
----
-
-## 🧩 Agent Skills（支持多平台）
+## 🧩 Agent Skills（多平台支持）
 
 项目内置 5 个 AI Agent Skill，不绑定任何特定 IDE。`skills/` 目录下的 `.md` 文件是通用格式，**Claude Code、Cursor、GitHub Copilot、Windsurf、TRAE IDE** 等均可使用。
 
-### 可用 Skill
-
-| Skill | 做什么 | 需要安装 |
-|------|------|------|
+| Skill | 功能 | 依赖 |
+|-------|------|------|
 | **fetch-emails** | IMAP 连接邮箱，获取邮件列表 | `python-dotenv` |
 | **classify-emails** | 域名+关键词双规则分类差旅邮件 | `python-dotenv` |
-| **extract-emails** | 8 平台解析器，提取金额/日期/路线/订单号 | `python-dotenv PyPDF2` |
-| **generate-report** | 全链路扫描 → 三 Sheet Excel + 附件归档 | `python-dotenv PyPDF2 openpyxl` |
-| **agent-report** | LLM 增强版：智能分类+提取+出差聚合，多模型 | `python-dotenv PyPDF2 openpyxl openai` |
+| **extract-emails** | 多平台解析器，提取结构化信息 | `python-dotenv PyPDF2` |
+| **generate-report** | 全链路 → 三 Sheet Excel + 附件归档 | `python-dotenv PyPDF2 openpyxl` |
+| **agent-report** | LLM 增强版：智能分类+提取+出差聚合 | 以上全部 + `openai` |
 
-### 如何使用
+> 详细使用说明见 [Agent Skills 文档](docs/skills.md)
 
-**方式一：克隆仓库（推荐，所有 Skill 自动就绪）**
+---
 
-```bash
-git clone https://github.com/Hao-Miracle/biztrip-agent.git
+## 🏗 项目架构
+
 ```
-
-- **TRAE IDE**：`.trae/skills/` 自动加载，直接对话触发
-- **Claude Code**：`/init` 或引用 `skills/` 目录下的 `.md` 文件
-- **Cursor**：将 `skills/*.md` 复制到 `.cursor/rules/` 目录
-- **Copilot**：将 Skill 内容追加到 `.github/copilot-instructions.md`
-
-**方式二：只下载需要的 Skill**
-
-```bash
-# 下载 Skill 定义文件 + 对应 Python 脚本即可
-curl -o skills/generate-report.md \
-  https://raw.githubusercontent.com/Hao-Miracle/biztrip-agent/main/skills/generate-report.md
-
-# 放入你的 Agent 能识别的位置
-cp skills/generate-report.md .cursor/rules/
+BizTrip-Agent/
+├── phase1/             ← 规则引擎（零依赖，必装）
+│   ├── fetch_emails.py      IMAP 邮箱连接
+│   ├── classify_emails.py   规则分类（域名+关键词）
+│   ├── extract_emails.py    结构化提取（正则+PDF）
+│   └── generate_report.py   全链路输出（Excel+附件）
+├── phase2/             ← Agent 引擎（LLM 增强，可选）
+│   ├── llm_classify.py      LLM 路由分类 + 规则降级
+│   ├── llm_extract.py       LLM 专用提取 + 正则降级
+│   ├── llm_aggregate.py     LLM 出差聚合 + 规则兜底
+│   └── agent_report.py      Agent 主入口
+├── skills/             ← 通用 Agent Skill（.md 格式）
+├── .trae/skills/       ← TRAE IDE 专用 Skill
+├── docs/               ← 使用文档
+├── wiki/               ← 知识库（产品/架构/决策/规格）
+├── raw/                ← 原始需求文档
+├── .env.example        ← 配置模板
+├── CHANGELOG.md        ← 变更日志
+├── CONTRIBUTING.md     ← 贡献指南
+├── LICENSE             ← MIT 许可证
+└── README.md
 ```
-
-> Skill 是纯文本指令，核心能力在 `phase1/` 和 `phase2/` 的 Python 脚本中。单独下载 Skill 时需确保对应脚本也在项目中。
 
 ---
 
 ## 💡 设计原则
 
-1. **两层可用** — 零配置规则引擎保证基本可用，配 LLM 升级智能提取，不配也完整
-2. **金额准确第一** — PDF 文件名 > 价税合计 > 合计...元 > ¥ 兜底，禁止取税额
-3. **机票按附件拆分** — 往返机票拆为独立记录，不从一封邮件合并
-4. **出差+旅行双模式** — 同一引擎，切换输出模式，零额外开发成本
-5. **附件自动归档** — PDF/ZIP 原件自动下载，每条记录可溯源
-6. **隐私优先** — 所有数据本地处理，只读邮箱权限
+1. **数据准确是底线** — 每一行金额、每一条日期都与邮件原文一致
+2. **规则优先，零 API Key 可运行** — 默认基于规则引擎，零成本
+3. **两层可用** — 零配置保证基本可用，配 LLM 升级智能提取
+4. **隐私优先** — 所有数据本地处理，只读邮箱权限
+5. **附件可溯源** — 原始 PDF/ZIP 自动归档，每条记录都能查到原件
+6. **机票按附件拆分** — 往返机票拆为独立记录，不从一封邮件合并
 
 ---
 
@@ -235,20 +253,53 @@ cp skills/generate-report.md .cursor/rules/
 |------|------|------|
 | **Phase 1** | 规则引擎 — 域名+关键词+正则，零 API Key | ✅ 完成 |
 | **Phase 1.5** | Agent 引擎 — LLM 增强 + 出差聚合 + 自动降级 | ✅ 完成 |
-| **Phase 2** | Web 应用 — Next.js + 邮箱 OAuth + 可视化行程卡片 | 📋 规划中 |
+| **Phase 2** | Web 应用 — OAuth 登录 + 可视化行程卡片 + 云同步 | 📋 规划中 |
+| **Phase 3** | 团队版 — 多人协作 + 审批流 + 财务系统对接 | 💡 构思中 |
+
+---
+
+## ❓ 常见问题
+
+**Q: 必须配置 LLM API Key 才能用吗？**  
+不用。不配也能完整使用，走纯规则引擎。LLM 是锦上添花的增强选项。
+
+**Q: 会修改我邮箱里的邮件吗？**  
+绝对不会。只有 IMAP 只读权限，只读取不修改、不删除、不发送。
+
+**Q: 支持哪些邮箱？**  
+QQ / 163 / 126 / Gmail / Outlook，理论上所有标准 IMAP 邮箱都支持。
+
+**Q: 数据存在哪里？**  
+全部在你本地 `output/` 目录，不上传任何服务器。
+
+更多问题见 [FAQ](docs/faq.md)
+
+---
+
+## 🤝 贡献
+
+欢迎各种形式的贡献！
+
+- 🐛 [报告 Bug](../../issues/new?template=bug_report.md)
+- 💡 [提功能建议](../../issues/new?template=feature_request.md)
+- 📝 改进文档
+- 🔧 提交代码修复或新功能
+- 🌐 新增平台解析器
+
+详细指南见 [贡献指南](CONTRIBUTING.md)
 
 ---
 
 ## 📄 许可证
 
-MIT
+MIT License — 详见 [LICENSE](LICENSE)
 
-## 📝 变更日志
+---
 
-完整版本历史请查看 [CHANGELOG.md](CHANGELOG.md)。
+<div align="center">
 
-## 🤝 贡献
+如果这个工具帮你节省了时间，点个 ⭐ Star 支持一下吧！
 
-- PR / Issue 欢迎
-- 新增平台规则：在 `classify_emails.py` 的 `DOMAIN_RULES` 加一行域名
-- 问题反馈：在 GitHub Issues 中描述你的邮箱平台和遇到的提取错误
+Made with ❤️ by [HAO-Miracle](https://github.com/Hao-Miracle)
+
+</div>
