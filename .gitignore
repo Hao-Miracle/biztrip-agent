@@ -1,0 +1,29 @@
+# 邮箱配置（含密码）
+.env
+
+# 生成报表（不提交）
+output/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# 日志
+*.log
+
+# Node.js
+node_modules/
+package-lock.json
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.obsidian/
