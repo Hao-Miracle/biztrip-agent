@@ -3,6 +3,13 @@
 > 个人出差与旅行的行程与报销信息自动归集工具。
 > 授权邮箱，AI 自动扫描确认邮件，提取结构化信息。出差中看行程，出差后一键生成报销表。
 
+<p>
+  <img src="https://img.shields.io/badge/version-0.1.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="license">
+  <img src="https://img.shields.io/badge/python-3.8+-yellow" alt="python">
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/CHANGELOG-查看-8A2BE2" alt="changelog"></a>
+</p>
+
 ## 🌟 核心价值
 
 | 阶段 | 你需要什么 | 它做什么 |
@@ -235,6 +242,10 @@ cp skills/generate-report.md .cursor/rules/
 ## 📄 许可证
 
 MIT
+
+## 📝 变更日志
+
+完整版本历史请查看 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 🤝 贡献
 
