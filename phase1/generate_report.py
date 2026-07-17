@@ -558,7 +558,8 @@ def main():
         for cat, amt in sorted(categories.items(), key=lambda x: -x[1]):
             row += 1
             count = sum(1 for r in records if r['分类'] == cat and r['金额'] != '')
-            vals = [cat, count, amt, f'{amt/total*100:.1f}%', '', '']
+            pct = f'{amt/total*100:.1f}%' if total else '0.0%'
+            vals = [cat, count, amt, pct, '', '']
             fill = cat_fills.get(cat, PatternFill())
             for col, val in enumerate(vals, 1):
                 cell = ws.cell(row=row, column=col, value=val)
@@ -666,7 +667,8 @@ def main():
         
         for i, (v, data) in enumerate(sorted(vendors.items(), key=lambda x: -x[1]['amount']), 1):
             row = i + 2
-            vals = [v, data['count'], data['amount'], f"{data['amount']/total*100:.1f}%"]
+            pct = f"{data['amount']/total*100:.1f}%" if total else '0.0%'
+            vals = [v, data['count'], data['amount'], pct]
             row_fill = PatternFill(start_color=LIGHT_GRAY, end_color=LIGHT_GRAY, fill_type='solid') if i % 2 == 0 else PatternFill()
             for col, val in enumerate(vals, 1):
                 cell = ws3.cell(row=row, column=col, value=val)
@@ -674,11 +676,6 @@ def main():
                 cell.alignment = center_align
                 cell.border = thin_border
                 cell.fill = row_fill
-        
-        # 保存
-        today = datetime.now().strftime('%Y%m%d')
-        xlsx_path = os.path.join(OUTPUT_DIR, f'差旅汇总_{today}.xlsx')
-        wb.save(xlsx_path)
         
         # 保存
         today = datetime.now().strftime('%Y%m%d')

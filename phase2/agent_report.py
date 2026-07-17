@@ -368,7 +368,8 @@ def main():
         print(f'  🧠 LLM 提取: {llm_count} 条  📋 规则降级: {rule_count} 条')
     print(f'  ✈️  识别到 {len(trips)} 次出差/旅行')
     print(f'  💰 总金额: ¥{total_amount:,.2f}')
-    print(f'  📊 Excel: {os.path.join(OUTPUT_DIR, f"差旅汇总_{datetime.now().strftime("%Y%m%d")}.xlsx")}')
+    report_name = f"差旅汇总_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    print(f'  📊 Excel: {os.path.join(OUTPUT_DIR, report_name)}')
     print(f'  📎 附件: {ATTACH_DIR}/')
 
     if trips:
@@ -533,7 +534,8 @@ def _generate_excel(records, trips, total_amount, scan_label):
     for cat, amt in sorted(categories.items(), key=lambda x: -x[1]):
         row += 1
         count = sum(1 for r in records if r.get('分类') == cat and r.get('金额', '') != '')
-        vals = [cat, count, amt, f'{amt/total*100:.1f}%', '', '']
+        pct = f'{amt/total*100:.1f}%' if total else '0.0%'
+        vals = [cat, count, amt, pct, '', '']
         cf = cat_fills.get(cat)
         for col, val in enumerate(vals, 1):
             cell = ws.cell(row=row, column=col, value=val)

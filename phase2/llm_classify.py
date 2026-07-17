@@ -14,7 +14,6 @@
 import os
 import json
 import re
-from openai import OpenAI
 
 
 # ---------- 品类列表 ----------
@@ -37,6 +36,12 @@ def _get_client():
         return None
 
     base_url = os.getenv('LLM_BASE_URL', '') or os.getenv('DEEPSEEK_BASE_URL', 'https://api.deepseek.com/v1')
+    try:
+        from openai import OpenAI
+    except ImportError:
+        _client = False
+        return None
+
     _client = OpenAI(api_key=api_key, base_url=base_url)
     return _client
 
@@ -186,9 +191,15 @@ def classify_email(subject, sender, body_preview):
 
 
 def has_api_key():
-    """检查是否配置了有效的 API Key"""
+    """检查是否配置了有效的 API Key 且安装了 LLM 客户端依赖"""
     key = os.getenv('LLM_API_KEY', '') or os.getenv('DEEPSEEK_API_KEY', '')
-    return bool(key and not key.startswith('sk-your-'))
+    if not key or key.startswith('sk-your-'):
+        return False
+    try:
+        import openai  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 if __name__ == '__main__':
