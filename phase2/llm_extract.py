@@ -14,7 +14,6 @@
 import os
 import json
 import re
-from openai import OpenAI
 
 
 _client = None
@@ -30,6 +29,12 @@ def _get_client():
         _client = False
         return None
     base_url = os.getenv('LLM_BASE_URL', '') or os.getenv('DEEPSEEK_BASE_URL', 'https://api.deepseek.com/v1')
+    try:
+        from openai import OpenAI
+    except ImportError:
+        _client = False
+        return None
+
     _client = OpenAI(api_key=api_key, base_url=base_url)
     return _client
 
