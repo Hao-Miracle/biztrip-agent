@@ -8,74 +8,16 @@
 
 import imaplib
 import email
-from email.header import decode_header
 import os
 import re
+import sys
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-# ---------- 分类规则 ----------
-# 按域名匹配 —— 发件人域名包含以下关键词即归类
-DOMAIN_RULES = {
-    '机票': [
-        'qunar.com', 'ctrip.com', 'fliggy.com', 'alitrip.com',
-        'airchina', 'ceair.com', 'csair.com', 'chinamobile.com',
-        ' bookings.com', 'expedia', 'skyscanner', 'trip.com',
-    ],
-    '火车票': [
-        '12306.cn', 'zhixing.com', 'tiexing.com',
-    ],
-    '酒店': [
-        'booking.com', 'agoda.com', 'airbnb.com',
-        'meituan.com', 'dianping.com', 'elong.com',
-    ],
-    '网约车': [
-        'didiglobal.com', 'didipinduo.com', 'uber.com',
-        'gaode.com', 'shouqiev.com',
-    ],
-    '发票': [
-        'crestv.cn',  # 智慧发票服务平台
-        'fapiao.com', 'invoice.', '发票',
-    ],
-    '门票/活动': [
-        'damai.cn', 'maoyan.com', 'taobao.com/ticket',
-        'showstart.com',
-    ],
-}
-
-# 关键词匹配 —— 主题包含以下关键词即归入对应类别
-KEYWORD_RULES = {
-    '机票': ['机票', '航班', '登机', '值机', '航空', 'flight', 'boarding'],
-    '火车票': ['火车票', '高铁', '动车', '12306', '车票', 'train'],
-    '酒店': ['酒店', '民宿', '入住', '预订成功', 'booking confirmation', 'hotel'],
-    '网约车': ['滴滴', '网约车', '行程', '快车', '专车', '出租车'],
-    '发票': ['发票', 'invoice', '报销', '电子凭证', ' receipt', 'fapiao'],
-    '门票': ['门票', '演出', '景点', '展览', '入场券', 'ticket'],
-}
-
-# 广告/无关域名黑名单 —— 包含这些域名的直接跳过
-SPAM_DOMAINS = [
-    'job51', 'steampowered', 'email.apple.com', 'amazon',
-    'jd.com', 'taobao.com', 'tmall.com', 'pinduoduo',
-    'weixin', 'alipay', '10000@', '10086@',
-]
-
-
-def decode_str(s):
-    if not s:
-        return ''
-    parts = decode_header(s)
-    result = []
-    for content, charset in parts:
-        if isinstance(content, bytes):
-            try:
-                result.append(content.decode(charset or 'utf-8', errors='replace'))
-            except:
-                result.append(content.decode('utf-8', errors='replace'))
-        else:
-            result.append(content)
-    return ''.join(result)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from common.utils import decode_str, get_email_config
+from common.rules import DOMAIN_RULES, KEYWORD_RULES, SPAM_DOMAINS
 
 
 def get_body_preview(msg, max_chars=300):
@@ -151,24 +93,8 @@ def classify_email(sender, subject, body):
     return {'is_relevant': False, 'category': '未识别', 'method': '无匹配'}
 
 
-def _get_email_config():
-    """获取邮箱配置，支持通用变量 + 向后兼容旧 QQ_EMAIL"""
-    account = os.getenv('EMAIL_ACCOUNT', '') or os.getenv('QQ_EMAIL', '')
-    password = os.getenv('EMAIL_PASSWORD', '') or os.getenv('QQ_AUTH_CODE', '')
-    server = os.getenv('EMAIL_IMAP_SERVER', '') or os.getenv('QQ_IMAP_SERVER', '')
-    port = int(os.getenv('EMAIL_IMAP_PORT', '') or os.getenv('QQ_IMAP_PORT', '0'))
-    if not server:
-        if '@163.com' in account: server = 'imap.163.com'
-        elif '@126.com' in account: server = 'imap.126.com'
-        elif '@gmail.com' in account: server = 'imap.gmail.com'
-        elif '@outlook.com' in account or '@hotmail.com' in account: server = 'outlook.office365.com'
-        else: server = 'imap.qq.com'
-    if not port: port = 993
-    return account, password, server, port
-
-
 def main(count=20):
-    email_addr, auth_code, imap_server, imap_port = _get_email_config()
+    email_addr, auth_code, imap_server, imap_port = get_email_config()
     
     if not email_addr or not auth_code:
         print("❌ 请在 .env 中配置邮箱信息")

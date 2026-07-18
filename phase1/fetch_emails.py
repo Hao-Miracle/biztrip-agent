@@ -11,48 +11,20 @@ QQ邮箱 IMAP 接入测试
 
 import imaplib
 import email
-from email.header import decode_header
 import os
+import sys
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-def decode_str(s):
-    """解码邮件标题等"""
-    if not s:
-        return ''
-    parts = decode_header(s)
-    result = []
-    for content, charset in parts:
-        if isinstance(content, bytes):
-            try:
-                result.append(content.decode(charset or 'utf-8', errors='replace'))
-            except:
-                result.append(content.decode('utf-8', errors='replace'))
-        else:
-            result.append(content)
-    return ''.join(result)
-
-def _get_email_config():
-    """获取邮箱配置，支持通用变量 + 向后兼容旧 QQ_EMAIL"""
-    account = os.getenv('EMAIL_ACCOUNT', '') or os.getenv('QQ_EMAIL', '')
-    password = os.getenv('EMAIL_PASSWORD', '') or os.getenv('QQ_AUTH_CODE', '')
-    server = os.getenv('EMAIL_IMAP_SERVER', '') or os.getenv('QQ_IMAP_SERVER', '')
-    port = int(os.getenv('EMAIL_IMAP_PORT', '') or os.getenv('QQ_IMAP_PORT', '0'))
-    if not server:
-        if '@163.com' in account: server = 'imap.163.com'
-        elif '@126.com' in account: server = 'imap.126.com'
-        elif '@gmail.com' in account: server = 'imap.gmail.com'
-        elif '@outlook.com' in account or '@hotmail.com' in account: server = 'outlook.office365.com'
-        else: server = 'imap.qq.com'
-    if not port: port = 993
-    return account, password, server, port
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from common.utils import decode_str, get_email_config
 
 
 def fetch_recent_emails(count=10):
     """连接邮箱，获取最近 N 封邮件的基本信息"""
     
-    email_addr, auth_code, server, port = _get_email_config()
+    email_addr, auth_code, server, port = get_email_config()
     
     if not email_addr or not auth_code:
         print("错误：请在 .env 文件中配置邮箱信息")

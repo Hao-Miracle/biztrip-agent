@@ -11,44 +11,18 @@
 
 import imaplib
 import email
-from email.header import decode_header
 import os
 import re
 import json
+import sys
 from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-# ---------- 复用模块2的分类 ----------
-# 域名规则（同 classify_emails.py）
-DOMAIN_RULES = {
-    '机票': ['qunar.com', 'ctrip.com', 'fliggy.com', 'alitrip.com', 'airchina', 'ceair.com', 'csair.com', 'trip.com'],
-    '火车票': ['12306.cn', 'zhixing.com', 'tiexing.com'],
-    '酒店': ['booking.com', 'agoda.com', 'airbnb.com', 'meituan.com', 'huazhuhotels.com'],
-    '网约车': ['didiglobal.com', 'xiaojukeji.com', 'uber.com', 'amap.com'],
-    '发票': ['crestv.cn', 'fapiao.com', 'invoice.', 'txffp.com'],
-    '门票': ['damai.cn', 'maoyan.com', 'showstart.com'],
-}
-
-KEYWORD_RULES = {
-    '机票': ['机票', '航班', '登机', '航空'],
-    '火车票': ['火车票', '高铁', '动车', '12306'],
-    '酒店': ['酒店', '民宿', '入住'],
-    '网约车': ['滴滴', '网约车'],
-    '发票': ['发票', '报销', '电子凭证'],
-}
-
-def decode_str(s):
-    if not s: return ''
-    parts = decode_header(s)
-    result = []
-    for content, charset in parts:
-        if isinstance(content, bytes):
-            try: result.append(content.decode(charset or 'utf-8', errors='replace'))
-            except: result.append(content.decode('utf-8', errors='replace'))
-        else: result.append(content)
-    return ''.join(result)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from common.utils import decode_str, get_email_config
+from common.rules import DOMAIN_RULES, KEYWORD_RULES, SPAM_DOMAINS
 
 def get_full_body(msg):
     """获取邮件完整正文（优先纯文本 → HTML降级 → PDF附件）"""
@@ -322,24 +296,8 @@ def extract_email(msg, category):
     return data
 
 
-def _get_email_config():
-    """获取邮箱配置，支持通用变量 + 向后兼容旧 QQ_EMAIL"""
-    account = os.getenv('EMAIL_ACCOUNT', '') or os.getenv('QQ_EMAIL', '')
-    password = os.getenv('EMAIL_PASSWORD', '') or os.getenv('QQ_AUTH_CODE', '')
-    server = os.getenv('EMAIL_IMAP_SERVER', '') or os.getenv('QQ_IMAP_SERVER', '')
-    port = int(os.getenv('EMAIL_IMAP_PORT', '') or os.getenv('QQ_IMAP_PORT', '0'))
-    if not server:
-        if '@163.com' in account: server = 'imap.163.com'
-        elif '@126.com' in account: server = 'imap.126.com'
-        elif '@gmail.com' in account: server = 'imap.gmail.com'
-        elif '@outlook.com' in account or '@hotmail.com' in account: server = 'outlook.office365.com'
-        else: server = 'imap.qq.com'
-    if not port: port = 993
-    return account, password, server, port
-
-
 def main():
-    email_addr, auth_code, imap_server, imap_port = _get_email_config()
+    email_addr, auth_code, imap_server, imap_port = get_email_config()
     
     if not email_addr or not auth_code:
         print("❌ 请在 .env 中配置邮箱信息")
@@ -375,7 +333,7 @@ def main():
             # 先分类
             # 规则同 classify_emails.py
             sender_lower = sender.lower()
-            is_spam = any(d in sender_lower for d in ['job51', 'steampowered', '10000@', 'email.apple.com', 'cmbchina', '2ksports'])
+            is_spam = any(d in sender_lower for d in SPAM_DOMAINS)
             if is_spam:
                 continue
             
