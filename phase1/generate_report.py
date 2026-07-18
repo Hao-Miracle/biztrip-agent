@@ -9,13 +9,17 @@
     output/附件/
 """
 
-import imaplib, email, os, re, json
-from email.header import decode_header
+import imaplib, email, os, re, json, sys
 from datetime import datetime
 from dotenv import load_dotenv
 from io import BytesIO
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from common.utils import decode_str, get_email_config
+from common.rules import DOMAIN_RULES, KEYWORD_RULES, SPAM_DOMAINS
+from common.email_parser import get_email_text
 
 # ========== 配置 ==========
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -31,114 +35,6 @@ except PermissionError:
     print(f"❌ 沙箱限制：无法写入项目目录 {OUTPUT_DIR}")
     print(f"📌 请手动运行：cp -r /tmp/biztrip-agent_output/* \"{OUTPUT_DIR}/\"")
     exit(1)
-
-# ========== 复用模块2的分类规则 ==========
-DOMAIN_RULES = {
-    '机票': ['qunar.com', 'ctrip.com', 'fliggy.com', 'alitrip.com', 'airchina', 'ceair.com', 'csair.com', 'trip.com'],
-    '火车票': ['12306.cn', 'zhixing.com', 'tiexing.com'],
-    '酒店': ['booking.com', 'agoda.com', 'airbnb.com', 'meituan.com', 'huazhuhotels.com'],
-    '网约车': ['didiglobal.com', 'xiaojukeji.com', 'uber.com', 'amap.com'],
-    '发票': ['crestv.cn', 'fapiao.com', 'invoice.', 'txffp.com'],
-    '门票': ['damai.cn', 'maoyan.com', 'showstart.com'],
-}
-
-KEYWORD_RULES = {
-    '机票': ['机票', '航班', '登机', '航空'],
-    '火车票': ['火车票', '高铁', '动车', '12306'],
-    '酒店': ['酒店', '民宿', '入住'],
-    '网约车': ['滴滴', '网约车'],
-    '发票': ['发票', '报销', '电子凭证'],
-}
-
-SPAM_DOMAINS = ['job51', 'steampowered', 'email.apple.com', '10000@', 'cmbchina', '2ksports', 'amazon']
-
-
-def decode_str(s):
-    if not s: return ''
-    parts = decode_header(s)
-    result = []
-    for content, charset in parts:
-        if isinstance(content, bytes):
-            try: result.append(content.decode(charset or 'utf-8', errors='replace'))
-            except: result.append(content.decode('utf-8', errors='replace'))
-        else: result.append(content)
-    return ''.join(result)
-
-
-def get_email_text(msg):
-    """提取邮件正文 + PDF附件内容"""
-    body = ''
-    pdf_texts = []
-    
-    if msg.is_multipart():
-        for part in msg.walk():
-            ct = part.get_content_type()
-            raw = part.get_payload(decode=True)
-            if not raw: continue
-            
-            if ct == 'text/plain':
-                for enc in ['utf-8', 'gbk', 'gb2312', 'gb18030']:
-                    try: body = raw.decode(enc); break
-                    except: pass
-                if body: break
-            
-            if ct == 'text/html' and not body:
-                for enc in ['utf-8', 'gbk', 'gb2312', 'gb18030']:
-                    try: html = raw.decode(enc); break
-                    except: pass
-                else: html = raw.decode('utf-8', errors='replace')
-                html = re.sub(r'<(style|script)[^>]*>.*?</\1>', '', html, flags=re.DOTALL)
-                html = re.sub(r'<[^>]+>', '\n', html)
-                html = re.sub(r'\n{3,}', '\n\n', html)
-                html = re.sub(r'&nbsp;', ' ', html)
-                body = html.strip()
-    
-    # PDF附件
-    if msg.is_multipart():
-        for part in msg.walk():
-            fn = part.get_filename()
-            ct = part.get_content_type()
-            fn_decoded = decode_str(fn) if fn else ''
-            is_pdf = (fn and fn.lower().endswith('.pdf')) or ct == 'application/pdf' or '.pdf' in fn_decoded.lower()
-            if is_pdf:
-                raw = part.get_payload(decode=True)
-                if raw:
-                    try:
-                        from PyPDF2 import PdfReader
-                        reader = PdfReader(BytesIO(raw))
-                        for page in reader.pages:
-                            t = page.extract_text()
-                            if t: pdf_texts.append(t)
-                    except:
-                        pass
-    
-    # ZIP附件 → 解压后找内部PDF提取文本
-    if msg.is_multipart():
-        for part in msg.walk():
-            fn = part.get_filename()
-            if not fn: continue
-            fn_decoded = decode_str(fn)
-            if not fn_decoded.lower().endswith('.zip'): continue
-            raw = part.get_payload(decode=True)
-            if not raw: continue
-            try:
-                import zipfile
-                zf = zipfile.ZipFile(BytesIO(raw))
-                for info in zf.infolist():
-                    if not info.filename.lower().endswith('.pdf'): continue
-                    pdf_data = zf.read(info.filename)
-                    from PyPDF2 import PdfReader
-                    reader = PdfReader(BytesIO(pdf_data))
-                    for page in reader.pages:
-                        t = page.extract_text()
-                        if t: pdf_texts.append(t)
-                zf.close()
-            except:
-                pass
-    
-    if pdf_texts:
-        body = body + '\n' + '\n'.join(pdf_texts)
-    return body or ''
 
 
 def save_attachment(msg, email_idx):
@@ -348,25 +244,9 @@ def get_date_filter():
     return None
 
 
-def _get_email_config():
-    """获取邮箱配置，支持通用变量 + 向后兼容旧 QQ_EMAIL"""
-    account = os.getenv('EMAIL_ACCOUNT', '') or os.getenv('QQ_EMAIL', '')
-    password = os.getenv('EMAIL_PASSWORD', '') or os.getenv('QQ_AUTH_CODE', '')
-    server = os.getenv('EMAIL_IMAP_SERVER', '') or os.getenv('QQ_IMAP_SERVER', '')
-    port = int(os.getenv('EMAIL_IMAP_PORT', '') or os.getenv('QQ_IMAP_PORT', '0'))
-    if not server:
-        if '@163.com' in account: server = 'imap.163.com'
-        elif '@126.com' in account: server = 'imap.126.com'
-        elif '@gmail.com' in account: server = 'imap.gmail.com'
-        elif '@outlook.com' in account or '@hotmail.com' in account: server = 'outlook.office365.com'
-        else: server = 'imap.qq.com'
-    if not port: port = 993
-    return account, password, server, port
-
-
 # ========== 主流程 ==========
 def main():
-    email_addr, auth_code, imap_server, imap_port = _get_email_config()
+    email_addr, auth_code, imap_server, imap_port = get_email_config()
     
     if not email_addr or not auth_code:
         print("❌ 请在 .env 中配置邮箱信息")
@@ -484,7 +364,7 @@ def main():
             '火车票': PatternFill(start_color='E0E7FF', end_color='E0E7FF', fill_type='solid'),
         }
         
-        total = sum(r['金额'] for r in records if r['金额'] != '')
+        total = sum(r.get('金额', 0) or 0 for r in records)
         
         # ===== Sheet 1: 报销总览 =====
         ws = wb.active
@@ -515,10 +395,10 @@ def main():
         ws.row_dimensions[4].height = 40
         
         # 统计指标
-        cats_with_amount = len([r for r in records if r['金额'] != ''])
+        cats_with_amount = len([r for r in records if r.get('金额', '') != ''])
         avg_per_item = total / cats_with_amount if cats_with_amount > 0 else 0
         stats = [
-            ('费用笔数', f'{cats_with_amount} 笔', '分类数', f'{len(set(r["分类"] for r in records))} 类'),
+            ('费用笔数', f'{cats_with_amount} 笔', '分类数', f'{len(set(r.get("分类", "") for r in records))} 类'),
             ('单笔均额', f'¥ {avg_per_item:.2f}', '无金额记录', f'{len(records) - cats_with_amount} 笔'),
         ]
         for i, (label1, val1, label2, val2) in enumerate(stats):
@@ -551,13 +431,14 @@ def main():
         
         categories = {}
         for r in records:
-            if r['金额'] != '':
-                cat = r['分类']
-                categories[cat] = categories.get(cat, 0) + r['金额']
+            amt = r.get('金额', '')
+            if amt != '':
+                cat = r.get('分类', '其他')
+                categories[cat] = categories.get(cat, 0) + amt
         
         for cat, amt in sorted(categories.items(), key=lambda x: -x[1]):
             row += 1
-            count = sum(1 for r in records if r['分类'] == cat and r['金额'] != '')
+            count = sum(1 for r in records if r.get('分类') == cat and r.get('金额', '') != '')
             pct = f'{amt/total*100:.1f}%' if total else '0.0%'
             vals = [cat, count, amt, pct, '', '']
             fill = cat_fills.get(cat, PatternFill())
@@ -571,7 +452,7 @@ def main():
         
         # 合计行
         row += 1
-        total_count = sum(1 for r in records if r['金额'] != '')
+        total_count = sum(1 for r in records if r.get('金额', '') != '')
         vals = ['合计', total_count, total, '100%', '', '']
         for col, val in enumerate(vals, 1):
             cell = ws.cell(row=row, column=col, value=val)
@@ -610,16 +491,16 @@ def main():
             
             vals = [
                 i,
-                r['日期'] or '-',
-                r['分类'],
-                r['平台'] or '-',
-                r['金额'] if r['金额'] != '' else '-',
+                r.get('日期', '') or '-',
+                r.get('分类', ''),
+                r.get('平台', '') or '-',
+                r.get('金额', '') if r.get('金额', '') != '' else '-',
                 route or '-',
-                r['附件'] or '-'
+                r.get('附件', '') or '-'
             ]
             
-            cat_fill = cat_fills.get(r['分类'], PatternFill())
-            row_fill = cat_fill if r['分类'] in cat_fills else PatternFill()
+            cat_fill = cat_fills.get(r.get('分类', ''), PatternFill())
+            row_fill = cat_fill if r.get('分类', '') in cat_fills else PatternFill()
             
             for col, val in enumerate(vals, 1):
                 cell = ws2.cell(row=row, column=col, value=val)
@@ -630,9 +511,9 @@ def main():
                     cell.fill = cat_fill
         
         # 最高金额高亮
-        max_amt = max((r['金额'] for r in sorted_records if r['金额'] != ''), default=0)
+        max_amt = max((r.get('金额', 0) or 0 for r in sorted_records), default=0)
         for r_idx, r in enumerate(sorted_records, 3):
-            if r['金额'] == max_amt:
+            if r.get('金额', 0) == max_amt:
                 for col in range(1, 8):
                     ws2.cell(row=r_idx, column=col).font = Font(bold=True, size=10, name='微软雅黑', color='DC2626')
         
@@ -658,12 +539,13 @@ def main():
         # 按平台汇总
         vendors = {}
         for r in records:
-            v = r['平台'] or '其他'
-            if r['金额'] != '':
+            v = r.get('平台', '') or '其他'
+            amt = r.get('金额', '')
+            if amt != '':
                 if v not in vendors:
                     vendors[v] = {'count': 0, 'amount': 0}
                 vendors[v]['count'] += 1
-                vendors[v]['amount'] += r['金额']
+                vendors[v]['amount'] += amt
         
         for i, (v, data) in enumerate(sorted(vendors.items(), key=lambda x: -x[1]['amount']), 1):
             row = i + 2

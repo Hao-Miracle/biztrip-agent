@@ -14,7 +14,10 @@
 import os
 import json
 import re
+import sys
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from common.rules import DOMAIN_RULES, KEYWORD_RULES, SPAM_DOMAINS
 
 # ---------- 品类列表 ----------
 CATEGORIES = ['机票', '火车票', '酒店', '网约车', '发票', '门票', '不相关']
@@ -115,27 +118,6 @@ def llm_classify(subject, sender, body_preview):
 
 
 # ---------- 降级规则（复用 Phase 1 逻辑，轻量版）----------
-
-DOMAIN_RULES = {
-    '机票': ['qunar.com', 'ctrip.com', 'fliggy.com', 'alitrip.com', 'airchina', 'ceair.com', 'csair.com', 'trip.com'],
-    '火车票': ['12306.cn', 'zhixing.com', 'tiexing.com'],
-    '酒店': ['booking.com', 'agoda.com', 'airbnb.com', 'meituan.com', 'huazhuhotels.com'],
-    '网约车': ['didiglobal.com', 'xiaojukeji.com', 'uber.com', 'amap.com'],
-    '发票': ['crestv.cn', 'fapiao.com', 'invoice.', 'txffp.com'],
-    '门票': ['damai.cn', 'maoyan.com', 'showstart.com'],
-}
-
-KEYWORD_RULES = {
-    '机票': ['机票', '航班', '登机', '航空', 'flight', 'boarding'],
-    '火车票': ['火车票', '高铁', '动车', '12306', '车票', 'train'],
-    '酒店': ['酒店', '民宿', '入住', '预订成功', 'booking confirmation', 'hotel'],
-    '网约车': ['滴滴', '网约车', '行程', '快车', '专车', '出租车'],
-    '发票': ['发票', 'invoice', '报销', '电子凭证', 'receipt', 'fapiao'],
-    '门票': ['门票', '演出', '景点', '展览', '入场券', 'ticket'],
-}
-
-SPAM_DOMAINS = ['job51', 'steampowered', 'email.apple.com', 'amazon', 'jd.com', 'taobao.com', 'tmall.com', 'pinduoduo', 'weixin', 'alipay']
-
 
 def rule_classify(sender, subject):
     """正则降级分类"""

@@ -30,123 +30,27 @@ import os
 import sys
 import re
 import json
-from email.header import decode_header
 from datetime import datetime
 from io import BytesIO
 
 from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from common.utils import decode_str, get_email_config
+from common.email_parser import get_email_text
 
 # Phase 2 LLM 模块
 from llm_classify import classify_email, has_api_key as llm_available
 from llm_extract import extract_record
 from llm_aggregate import aggregate_trips
 
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
-
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join(PROJECT_DIR, 'output')
 ATTACH_DIR = os.path.join(OUTPUT_DIR, '附件')
 
 os.makedirs(ATTACH_DIR, exist_ok=True)
-
-# ========== 邮件解析工具 ==========
-
-
-def decode_str(s):
-    if not s:
-        return ''
-    parts = decode_header(s)
-    result = []
-    for content, charset in parts:
-        if isinstance(content, bytes):
-            try:
-                result.append(content.decode(charset or 'utf-8', errors='replace'))
-            except Exception:
-                result.append(content.decode('utf-8', errors='replace'))
-        else:
-            result.append(content)
-    return ''.join(result)
-
-
-def get_email_text(msg):
-    """提取邮件正文 + PDF/ZIP 附件文本"""
-    body = ''
-    pdf_texts = []
-
-    if msg.is_multipart():
-        for part in msg.walk():
-            ct = part.get_content_type()
-            raw = part.get_payload(decode=True)
-            if not raw:
-                continue
-
-            if ct == 'text/plain':
-                for enc in ['utf-8', 'gbk', 'gb2312', 'gb18030']:
-                    try:
-                        body = raw.decode(enc)
-                        break
-                    except Exception:
-                        pass
-                if body:
-                    break
-
-            if ct == 'text/html' and not body:
-                for enc in ['utf-8', 'gbk', 'gb2312', 'gb18030']:
-                    try:
-                        html = raw.decode(enc)
-                        break
-                    except Exception:
-                        pass
-                else:
-                    html = raw.decode('utf-8', errors='replace')
-                html = re.sub(r'<(style|script)[^>]*>.*?</\1>', '', html, flags=re.DOTALL)
-                html = re.sub(r'<[^>]+>', '\n', html)
-                html = re.sub(r'\n{3,}', '\n\n', html)
-                html = re.sub(r'&nbsp;', ' ', html)
-                body = html.strip()
-
-    # PDF / ZIP 附件
-    if msg.is_multipart():
-        for part in msg.walk():
-            fn_raw = part.get_filename()
-            fn = decode_str(fn_raw) if fn_raw else ''
-            ct = part.get_content_type()
-            raw = part.get_payload(decode=True)
-            if not raw:
-                continue
-
-            if fn.lower().endswith('.pdf') or ct == 'application/pdf':
-                try:
-                    from PyPDF2 import PdfReader
-                    reader = PdfReader(BytesIO(raw))
-                    for page in reader.pages:
-                        t = page.extract_text()
-                        if t:
-                            pdf_texts.append(t)
-                except Exception:
-                    pass
-
-            if fn.lower().endswith('.zip'):
-                try:
-                    import zipfile
-                    zf = zipfile.ZipFile(BytesIO(raw))
-                    for info in zf.infolist():
-                        if not info.filename.lower().endswith('.pdf'):
-                            continue
-                        pdf_data = zf.read(info.filename)
-                        from PyPDF2 import PdfReader
-                        reader = PdfReader(BytesIO(pdf_data))
-                        for page in reader.pages:
-                            t = page.extract_text()
-                            if t:
-                                pdf_texts.append(t)
-                    zf.close()
-                except Exception:
-                    pass
-
-    if pdf_texts:
-        body = body + '\n' + '\n'.join(pdf_texts)
-    return body or ''
 
 
 def save_attachments(msg, email_idx):
@@ -179,44 +83,11 @@ def save_attachments(msg, email_idx):
     return saved
 
 
-# ========== 邮箱配置工具 ==========
-
-def _get_email_config():
-    """获取邮箱配置，支持通用变量 + 向后兼容旧 QQ_EMAIL 变量"""
-    # 优先新变量，向后兼容旧 QQ_EMAIL
-    account = os.getenv('EMAIL_ACCOUNT', '') or os.getenv('QQ_EMAIL', '')
-    password = os.getenv('EMAIL_PASSWORD', '') or os.getenv('QQ_AUTH_CODE', '')
-
-    # 根据账号自动推断 IMAP 服务器，也可通过 EMAIL_IMAP_SERVER 手动指定
-    server = os.getenv('EMAIL_IMAP_SERVER', '') or os.getenv('QQ_IMAP_SERVER', '')
-    port = int(os.getenv('EMAIL_IMAP_PORT', '') or os.getenv('QQ_IMAP_PORT', '0'))
-
-    if not server:
-        # 自动推断
-        if '@qq.com' in account:
-            server = 'imap.qq.com'
-        elif '@163.com' in account:
-            server = 'imap.163.com'
-        elif '@126.com' in account:
-            server = 'imap.126.com'
-        elif '@gmail.com' in account:
-            server = 'imap.gmail.com'
-        elif '@outlook.com' in account or '@hotmail.com' in account:
-            server = 'outlook.office365.com'
-        else:
-            server = 'imap.qq.com'  # 兜底
-
-    if not port:
-        port = 993
-
-    return account, password, server, port
-
-
 # ========== 主流程 ==========
 
 
 def main():
-    email_addr, auth_code, imap_server, imap_port = _get_email_config()
+    email_addr, auth_code, imap_server, imap_port = get_email_config()
 
     if not email_addr or not auth_code:
         print('❌ 请在 .env 中配置邮箱信息')
@@ -303,7 +174,7 @@ def main():
         # 分类（LLM 或规则）
         classify_result = classify_email(subject, sender, body[:500])
 
-        category = classify_result['category']
+        category = classify_result.get('category', '不相关')
         method = classify_result.get('method', '规则')
         if category == '不相关':
             continue
